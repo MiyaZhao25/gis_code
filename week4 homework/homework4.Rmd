@@ -1,0 +1,20 @@
+################ Homework 4 ###################
+```{r}
+library(sp)
+library(sf)
+library(tmap)
+library(RSQLite)
+library(tidyverse)
+library(dplyr)
+library(here)
+```
+```{r}
+GGIData <- read.csv(here("week4 homework", "HDR21-22_Composite_indices_complete_time_series.csv"),
+                     header = TRUE)
+World <- st_read(here("week4 homework","World_Countries_Generalized.shp"))
+```
+```{r}
+head(World)
+plot(World)
+```
+
