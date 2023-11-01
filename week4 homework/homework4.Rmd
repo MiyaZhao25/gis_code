@@ -7,6 +7,7 @@ library(RSQLite)
 library(tidyverse)
 library(dplyr)
 library(here)
+library(ggplot2)
 ```
 ```{r}
 GGIData <- read.csv(here("week4 homework", "HDR21-22_Composite_indices_complete_time_series.csv"),
@@ -15,6 +16,64 @@ World <- st_read(here("week4 homework","World_Countries_Generalized.shp"))
 ```
 ```{r}
 head(World)
-plot(World)
+map_plot <- ggplot() +
+  geom_sf(data = World) +
+  theme_minimal()
+print(map_plot)
+```
+```{r}
+Datatype <- GGIData %>% 
+  summarise_all(class) %>%
+  pivot_longer(everything(), 
+               names_to="All_variables", 
+               values_to="Variable_class")
+
+Datatype
+```
+```{r}
+DataSelect <- GGIData %>%
+  select(c(1,2,3,4),matches("gii"))
+colnames(DataSelect)
+
+GII <- DataSelect %>%
+  select(c(1:4, 26:35))
+colnames(GII)
+```
+```{r}
+GIIMap <- World %>%
+  left_join(.,
+            GII,
+            by = c("COUNTRY"="country"))
+
+plot(GIIMap)
+colnames(GIIMap)
+```
+```{r}
+GIIDif <- GIIMap %>%
+  group_by(COUNTRY) %>%
+  summarise(Dif = mean(var(.[, 11:20]), na.rm = TRUE))
+
+GIIDif <- GIIMap %>%
+  group_by(COUNTRY) %>%
+  mutate(Dif = var(.[, 11:20])) %>%
+  summarise(Dif = mean(Dif, na.rm = TRUE))
+
+
+GIIDif <- GIIMap %>%
+  group_by(COUNTRY) %>%
+  summarise(Dif = var(.[, 11:20]))
+
+
+GIIDif <- GIIMap %>%
+  #rowwise() %>%
+  #group_by(COUNTRY) %>%
+  summarise(Dif = var(row=3,c(11:20)))
+
+
+map_plot <- ggplot() +
+  geom_sf(data = GIIDif, aes(fill = "Dif" )) + # 将列名替换为你希望绘制的属性列名
+  scale_fill_gradient(low = "blue", high = "red") +
+  theme_minimal()
+print(map_plot)
 ```
 
