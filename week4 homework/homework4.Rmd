@@ -50,30 +50,14 @@ colnames(GIIMap)
 ```
 ```{r}
 GIIDif <- GIIMap %>%
-  group_by(COUNTRY) %>%
-  summarise(Dif = mean(var(.[, 11:20]), na.rm = TRUE))
+  mutate(compare = gii_2019 - gii_2010)
 
-GIIDif <- GIIMap %>%
-  group_by(COUNTRY) %>%
-  mutate(Dif = var(.[, 11:20])) %>%
-  summarise(Dif = mean(Dif, na.rm = TRUE))
-
-
-GIIDif <- GIIMap %>%
-  group_by(COUNTRY) %>%
-  summarise(Dif = var(.[, 11:20]))
-
-
-GIIDif <- GIIMap %>%
-  #rowwise() %>%
-  #group_by(COUNTRY) %>%
-  summarise(Dif = var(row=3,c(11:20)))
-
-
-map_plot <- ggplot() +
-  geom_sf(data = GIIDif, aes(fill = "Dif" )) + # 将列名替换为你希望绘制的属性列名
-  scale_fill_gradient(low = "blue", high = "red") +
+map_plot2 <- ggplot() +
+  geom_sf(data = GIIDif, aes(fill = GIIDif$gii_2010)) + # 将列名替换为你希望绘制的属性列名
+  geom_point(na.rm = FALSE) +
+  scale_fill_discrete() +  # 使用离散的颜色映射
   theme_minimal()
-print(map_plot)
+print(map_plot2)
+
 ```
 
