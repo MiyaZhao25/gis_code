@@ -1,0 +1,192 @@
+---
+title: "A spatial Analysis of New York Evictions"
+Author: Mingyuan Zhao | 
+Student Number: 23134046
+output: html_document
+date: "`r format(Sys.time(), '%X, %d %B, %Y')`"
+---
+# Originality declaration  
+
+I, [Mingyuan Zhao], confirm that the work presented in this assessment is my own. Where information has been derived from other sources, I confirm that this has been indicated in the work.
+
+date: `r format(Sys.time(), '%d %B, %Y')`
+
+# Start your response here
+
+## Initial project scope
+
+* What is my research question - is it different to the set question and why
+
+> This research will identify the spatial patterns that can be used to help preventing people being evicted in the New York.
+
+> My question is "are the evicitions in 2020 for New York showing a certain spatial pattern? Are they spatially random or clustering?"
+
+> A question for Spatial autocorrelation..."are the densitites of evicitions in New York similar over community districts for 2020"
+
+> A question for spatial regression..."What are the factors that might lead to variation in evictions across New York in 2020?"
+
+* Is it appropriate to use 2020 as a year? 
+
+> It is necessart to use year 2020, 2021 and 2022 as the study years. Because we can see the differences between years.
+
+
+####################### Loading Data ###############################
+```{r}
+# library packages
+library(spatstat)
+library(here)
+library(sp)
+library(rgeos)
+library(maptools)
+library(tmap)
+library(sf)
+library(geojson)
+library(geojsonio)
+library(tmaptools)
+library(stringr)
+library(janitor)
+library(tidyverse)
+```
+> Library packages for further analysis. 
+
+
+```{r}
+# reading data
+# CRS: 27700
+evictions <- read.csv(here::here(
+  "practical exam 1", "Evictions_20231118.csv"),
+                     na = c("NA", "n/a"))
+
+Borough <- st_read(here::here(
+  "practical exam 1", "Community Districts",
+  "geo_export_10e2af58-06db-468f-8ff7-a9572bee0603.shp"))%>%
+  st_transform(., 6538)
+
+qtm(Borough)
+```
+> 
+
+######################### Cleaning Data ##############################
+```{r}
+# summary data
+colnames(evictions)
+```
+
+```{r}
+summary(evictions)
+```
+
+```{r}
+summary(Borough)
+```
+
+```{r}
+# converting the data type
+evictions$Date <- as.Date(evictions$Executed.Date, format = "%m/%d/%Y")
+
+# Selecting data from evictions
+evictionNew <- evictions %>%
+   dplyr::filter(str_detect(Date, "2020")) %>%
+   filter(!is.na(Longitude)) %>%
+   filter(!is.na(Latitude)) %>%
+   filter(str_detect(Residential.Commercial, "Residential"))
+```
+> Select data from 2020-01-01 to 2020-12-30
+> Focus on the Residental area
+
+########################## Joining Data ##############################
+```{r}
+# change csv into spatial points
+sf_points <- evictionNew %>%
+  st_as_sf(., coords = c("Longitude", "Latitude"),
+           crs = 4326)%>%
+  st_transform(., crs=6538)
+    
+
+qtm(sf_points)
+```
+
+
+```{r}
+st_crs(sf_points)
+```
+
+```{r}
+st_crs(Borough)
+```
+
+```{r}
+# Spatial subsetting
+Sub_points <- sf_points[Borough, , op = st_within]
+
+
+# plot the evictions in the city
+tmap_mode("plot")
+tm_shape(Borough) +
+  tm_polygons(col = NA, alpha = 0.5) +
+tm_shape(sf_points) +
+  tm_dots(col = "blue")
+```
+
+########################## Point pattern analysis ###############################
+```{r}
+#create a sp object
+Sub_points <- Sub_points %>%
+  as(., 'Spatial')
+
+#now set a window as the borough boundary
+window <- as.owin(Borough)
+plot(window)
+
+#create a ppp object
+Sub_points.ppp <- ppp(x=Sub_points@coords[,1],
+                          y=Sub_points@coords[,2],
+                          window=window)
+
+Sub_points.ppp %>%
+  plot(.,pch=16,cex=0.5, 
+       main="Sub Points Harrow")
+
+# Kernel Density Estimation
+Sub_points.ppp %>%
+  density(., sigma=500) %>%
+  plot()
+
+```
+
+############ Density-based spatial clustering of applications ############
+```{r}
+K <- Sub_points.ppp %>%
+  Kest(., correction="border")%>%
+  plot()
+```
+###################### DBSCAN Analysis ###########################
+
+```{r}
+library(fpc)
+#first check the coordinate reference system of the spatial polygon:
+st_geometry(Borough)
+```
+```{r}
+install.packages(FNN)
+library(FNN)  # 加载 FNN 包
+k_distance <- knn.dist(your_data, k = k_value)
+
+```
+
+
+```{r}
+#first extract the points from the spatial points data frame
+ DBdataframe <- Sub_points %>%
+  coordinates(.)%>%
+  as.data.frame()
+
+#now run the dbscan analysis
+db <- DBdataframe %>%
+  fpc::dbscan(.,eps = 1000, MinPts = 60)
+
+#now plot the results
+plot(db, DBdataframe, main = "DBSCAN Output", frame = F)
+plot(Borough$boro_cd, add=T)
+```
+
